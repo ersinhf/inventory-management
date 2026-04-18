@@ -35,6 +35,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("WAREHOUSE_MANAGER")
+                .requestMatchers("/api/v1/suppliers/**").hasRole("WAREHOUSE_MANAGER")
                 .requestMatchers("/api/v1/requests/**").hasAnyRole("WAREHOUSE_MANAGER", "DEPARTMENT_EMPLOYEE")
                 .anyRequest().authenticated()
             )
