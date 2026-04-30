@@ -18,4 +18,6 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             ORDER BY po.createdAt DESC
             """)
     List<PurchaseOrder> filterByStatus(@Param("status") PurchaseOrderStatus status);
+
+    long countByStatus(PurchaseOrderStatus status);
 }

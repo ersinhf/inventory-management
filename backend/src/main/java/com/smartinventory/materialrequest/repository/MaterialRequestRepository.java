@@ -21,4 +21,6 @@ public interface MaterialRequestRepository extends JpaRepository<MaterialRequest
     List<MaterialRequest> filter(
             @Param("status") MaterialRequestStatus status,
             @Param("requesterId") Long requesterId);
+
+    long countByStatus(MaterialRequestStatus status);
 }

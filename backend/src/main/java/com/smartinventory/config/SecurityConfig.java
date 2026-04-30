@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/purchase-orders/**").hasRole("WAREHOUSE_MANAGER")
                 .requestMatchers("/api/v1/material-requests/**").hasAnyRole("WAREHOUSE_MANAGER", "DEPARTMENT_EMPLOYEE")
                 .requestMatchers("/api/v1/requests/**").hasAnyRole("WAREHOUSE_MANAGER", "DEPARTMENT_EMPLOYEE")
+                .requestMatchers("/api/v1/dashboard/**").hasAnyRole("WAREHOUSE_MANAGER", "DEPARTMENT_EMPLOYEE")
                 .anyRequest().authenticated()
             )
             .sessionManagement(session ->

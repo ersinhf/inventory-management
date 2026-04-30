@@ -2,6 +2,7 @@ package com.smartinventory.stockmovement.repository;
 
 import com.smartinventory.stockmovement.entity.StockMovement;
 import com.smartinventory.stockmovement.enums.MovementType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -28,4 +29,6 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
             @Param("to") LocalDateTime to);
 
     List<StockMovement> findByProductIdOrderByCreatedAtDesc(Long productId);
+
+    List<StockMovement> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }
