@@ -6,6 +6,9 @@ import {
   ShopOutlined,
   AppstoreOutlined,
   InboxOutlined,
+  SwapOutlined,
+  ShoppingCartOutlined,
+  FileDoneOutlined,
   LogoutOutlined,
   UserOutlined,
   MenuFoldOutlined,
@@ -29,6 +32,11 @@ export default function AppLayout() {
       : []),
     { key: "/categories", icon: <AppstoreOutlined />, label: "Kategoriler" },
     { key: "/products", icon: <InboxOutlined />, label: "Ürünler" },
+    { key: "/stock-movements", icon: <SwapOutlined />, label: "Stok Hareketleri" },
+    ...(isWarehouseManager
+      ? [{ key: "/purchase-orders", icon: <ShoppingCartOutlined />, label: "Satın Alma" }]
+      : []),
+    { key: "/material-requests", icon: <FileDoneOutlined />, label: "Malzeme Talepleri" },
   ];
 
   const handleLogout = () => {

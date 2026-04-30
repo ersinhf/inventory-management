@@ -9,6 +9,9 @@ import Dashboard from "./pages/Dashboard";
 import Suppliers from "./pages/Suppliers";
 import Categories from "./pages/Categories";
 import Products from "./pages/Products";
+import StockMovements from "./pages/StockMovements";
+import PurchaseOrders from "./pages/PurchaseOrders";
+import MaterialRequests from "./pages/MaterialRequests";
 
 function ManagerOnlyRoute({ children }) {
   const { isWarehouseManager } = useAuth();
@@ -40,6 +43,16 @@ export default function App() {
               />
               <Route path="/categories" element={<Categories />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/stock-movements" element={<StockMovements />} />
+              <Route
+                path="/purchase-orders"
+                element={
+                  <ManagerOnlyRoute>
+                    <PurchaseOrders />
+                  </ManagerOnlyRoute>
+                }
+              />
+              <Route path="/material-requests" element={<MaterialRequests />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
