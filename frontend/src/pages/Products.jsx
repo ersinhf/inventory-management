@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Table,
   Button,
@@ -20,7 +20,10 @@ import {
   EditOutlined,
   SearchOutlined,
   WarningOutlined,
+  QrcodeOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
+import { QRCodeCanvas } from "qrcode.react";
 import { productsApi } from "../api/products";
 import { categoriesApi } from "../api/categories";
 import { suppliersApi } from "../api/suppliers";
@@ -41,6 +44,8 @@ export default function Products() {
   const [editing, setEditing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
+  const [qrProduct, setQrProduct] = useState(null);
+  const qrCanvasRef = useRef(null);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -129,6 +134,7 @@ export default function Products() {
     try {
       const payload = {
         ...values,
+        barcode: values.barcode?.trim() ? values.barcode.trim() : null,
         supplierIds: values.supplierIds || [],
       };
       if (editing) {
@@ -145,6 +151,18 @@ export default function Products() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleDownloadQr = () => {
+    const canvas = qrCanvasRef.current?.querySelector("canvas");
+    if (!canvas || !qrProduct) return;
+    const url = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${qrProduct.barcode}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleToggleActive = async (record) => {
@@ -164,7 +182,28 @@ export default function Products() {
 
   const columns = [
     { title: "Ürün Adı", dataIndex: "name", key: "name" },
-    { title: "Barkod", dataIndex: "barcode", key: "barcode", width: 160 },
+    {
+      title: "Kod",
+      dataIndex: "barcode",
+      key: "barcode",
+      width: 150,
+      render: (v) => <Text code>{v}</Text>,
+    },
+    {
+      title: "QR",
+      key: "qr",
+      width: 70,
+      align: "center",
+      render: (_, r) => (
+        <Tooltip title="QR kodunu göster">
+          <Button
+            type="text"
+            icon={<QrcodeOutlined style={{ fontSize: 20 }} />}
+            onClick={() => setQrProduct(r)}
+          />
+        </Tooltip>
+      ),
+    },
     {
       title: "Kategori",
       key: "category",
@@ -334,11 +373,11 @@ export default function Products() {
           </Form.Item>
 
           <Form.Item
-            label="Barkod"
+            label="Kod / Barkod (opsiyonel)"
             name="barcode"
-            rules={[{ required: true, message: "Barkod zorunlu" }]}
+            extra="Boş bırakılırsa sistem otomatik üretir (PRD-000XXX). Tedarikçinin kendi barkodunu girmek için kullanabilirsin."
           >
-            <Input maxLength={50} />
+            <Input maxLength={50} placeholder="Otomatik üretilecek" />
           </Form.Item>
 
           <Space style={{ display: "flex" }} size="large">
@@ -384,6 +423,43 @@ export default function Products() {
             </Text>
           )}
         </Form>
+      </Modal>
+
+      <Modal
+        title={qrProduct ? `${qrProduct.name} — QR Kod` : "QR Kod"}
+        open={!!qrProduct}
+        onCancel={() => setQrProduct(null)}
+        footer={[
+          <Button key="close" onClick={() => setQrProduct(null)}>
+            Kapat
+          </Button>,
+          <Button
+            key="download"
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadQr}
+          >
+            PNG İndir
+          </Button>,
+        ]}
+        width={360}
+        destroyOnClose
+      >
+        {qrProduct && (
+          <div style={{ textAlign: "center" }}>
+            <div ref={qrCanvasRef} style={{ display: "inline-block", padding: 8, background: "#fff" }}>
+              <QRCodeCanvas
+                value={qrProduct.barcode}
+                size={256}
+                level="M"
+                includeMargin
+              />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Text code style={{ fontSize: 16 }}>{qrProduct.barcode}</Text>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

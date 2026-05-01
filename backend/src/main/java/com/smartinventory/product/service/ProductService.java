@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,15 +53,16 @@ public class ProductService {
 
     @Transactional
     public ProductResponse createProduct(ProductRequest request) {
-        if (productRepository.existsByBarcode(request.getBarcode())) {
+        String requestedBarcode = trimToNull(request.getBarcode());
+        if (requestedBarcode != null && productRepository.existsByBarcode(requestedBarcode)) {
             throw new IllegalArgumentException(
-                    "Bu barkodla kayıtlı bir ürün zaten var: " + request.getBarcode());
+                    "Bu barkodla kayıtlı bir ürün zaten var: " + requestedBarcode);
         }
 
         Product product = Product.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .barcode(request.getBarcode())
+                .barcode(requestedBarcode) // null ise kayıttan sonra otomatik üretilecek
                 .unitPrice(request.getUnitPrice())
                 .minimumStockLevel(request.getMinimumStockLevel())
                 .currentStock(0)
@@ -69,28 +71,54 @@ public class ProductService {
                 .active(true)
                 .build();
 
+        if (requestedBarcode == null) {
+            // İlk kayıt id atanması için. Kolon NOT NULL olduğu için geçici bir
+            // benzersiz placeholder ile kaydedip ardından kalıcı koda güncelliyoruz.
+            product.setBarcode("TMP-" + UUID.randomUUID());
+            Product saved = productRepository.save(product);
+            saved.setBarcode(generateAutoBarcode(saved.getId()));
+            return mapToResponse(productRepository.save(saved));
+        }
+
         return mapToResponse(productRepository.save(product));
     }
 
     @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = findProduct(id);
+        String requestedBarcode = trimToNull(request.getBarcode());
 
-        if (!product.getBarcode().equals(request.getBarcode())
-                && productRepository.existsByBarcode(request.getBarcode())) {
+        // Boş gelirse mevcut barkodu koru (otomatik üretileni silmek istemediğimiz varsayımı).
+        if (requestedBarcode != null
+                && !requestedBarcode.equals(product.getBarcode())
+                && productRepository.existsByBarcode(requestedBarcode)) {
             throw new IllegalArgumentException(
-                    "Bu barkodla kayıtlı bir ürün zaten var: " + request.getBarcode());
+                    "Bu barkodla kayıtlı bir ürün zaten var: " + requestedBarcode);
         }
 
         product.setName(request.getName());
         product.setDescription(request.getDescription());
-        product.setBarcode(request.getBarcode());
+        if (requestedBarcode != null) {
+            product.setBarcode(requestedBarcode);
+        }
         product.setUnitPrice(request.getUnitPrice());
         product.setMinimumStockLevel(request.getMinimumStockLevel());
         product.setCategory(resolveCategory(request.getCategoryId()));
         product.setSuppliers(resolveSuppliers(request.getSupplierIds()));
 
         return mapToResponse(productRepository.save(product));
+    }
+
+    private String generateAutoBarcode(Long id) {
+        return String.format("PRD-%06d", id);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Transactional

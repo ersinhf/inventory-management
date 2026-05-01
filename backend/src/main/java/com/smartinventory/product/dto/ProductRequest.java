@@ -24,8 +24,11 @@ public class ProductRequest {
     @Size(max = 500)
     private String description;
 
-    @Schema(description = "Barkod", example = "8690000000001")
-    @NotBlank(message = "Barkod boş olamaz")
+    @Schema(
+        description = "Ürün kodu / barkod. Boş bırakılırsa sistem otomatik olarak PRD-000XXX formatında üretir.",
+        example = "PRD-000042",
+        nullable = true
+    )
     @Size(max = 50)
     private String barcode;
 
