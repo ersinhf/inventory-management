@@ -9,6 +9,8 @@ import {
   SwapOutlined,
   ShoppingCartOutlined,
   FileDoneOutlined,
+  TeamOutlined,
+  BarChartOutlined,
   LogoutOutlined,
   UserOutlined,
   MenuFoldOutlined,
@@ -36,7 +38,13 @@ export default function AppLayout() {
     ...(isWarehouseManager
       ? [{ key: "/purchase-orders", icon: <ShoppingCartOutlined />, label: "Satın Alma" }]
       : []),
+    ...(isWarehouseManager
+      ? [{ key: "/reports", icon: <BarChartOutlined />, label: "Raporlar" }]
+      : []),
     { key: "/material-requests", icon: <FileDoneOutlined />, label: "Malzeme Talepleri" },
+    ...(isWarehouseManager
+      ? [{ key: "/users", icon: <TeamOutlined />, label: "Kullanıcılar" }]
+      : []),
   ];
 
   const handleLogout = () => {

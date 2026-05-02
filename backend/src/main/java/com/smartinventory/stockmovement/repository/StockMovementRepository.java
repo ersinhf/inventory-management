@@ -1,5 +1,6 @@
 package com.smartinventory.stockmovement.repository;
 
+import com.smartinventory.report.dto.TopMoverRow;
 import com.smartinventory.stockmovement.entity.StockMovement;
 import com.smartinventory.stockmovement.enums.MovementType;
 import org.springframework.data.domain.Pageable;
@@ -31,4 +32,27 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
     List<StockMovement> findByProductIdOrderByCreatedAtDesc(Long productId);
 
     List<StockMovement> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("""
+            SELECT new com.smartinventory.report.dto.TopMoverRow(
+                p.id, p.barcode, p.name,
+                SUM(CASE WHEN m.type = com.smartinventory.stockmovement.enums.MovementType.IN
+                         THEN m.quantity ELSE 0 END),
+                SUM(CASE WHEN m.type = com.smartinventory.stockmovement.enums.MovementType.OUT
+                         THEN m.quantity ELSE 0 END),
+                COUNT(m)
+            )
+            FROM StockMovement m JOIN m.product p
+            WHERE m.type IN (
+                    com.smartinventory.stockmovement.enums.MovementType.IN,
+                    com.smartinventory.stockmovement.enums.MovementType.OUT)
+              AND (:from IS NULL OR m.createdAt >= :from)
+              AND (:to IS NULL OR m.createdAt <= :to)
+            GROUP BY p.id, p.barcode, p.name
+            ORDER BY SUM(m.quantity) DESC
+            """)
+    List<TopMoverRow> findTopMovers(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
 }

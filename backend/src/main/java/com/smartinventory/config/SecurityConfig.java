@@ -38,8 +38,9 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/auth/login").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/v1/auth/register").hasRole("WAREHOUSE_MANAGER")
                 .requestMatchers("/api/v1/admin/**").hasRole("WAREHOUSE_MANAGER")
                 .requestMatchers("/api/v1/suppliers/**").hasRole("WAREHOUSE_MANAGER")
                 .requestMatchers("/api/v1/categories/**").hasAnyRole("WAREHOUSE_MANAGER", "DEPARTMENT_EMPLOYEE")
@@ -49,6 +50,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/material-requests/**").hasAnyRole("WAREHOUSE_MANAGER", "DEPARTMENT_EMPLOYEE")
                 .requestMatchers("/api/v1/requests/**").hasAnyRole("WAREHOUSE_MANAGER", "DEPARTMENT_EMPLOYEE")
                 .requestMatchers("/api/v1/dashboard/**").hasAnyRole("WAREHOUSE_MANAGER", "DEPARTMENT_EMPLOYEE")
+                .requestMatchers("/api/v1/reports/**").hasRole("WAREHOUSE_MANAGER")
                 .anyRequest().authenticated()
             )
             .sessionManagement(session ->

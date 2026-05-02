@@ -18,6 +18,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findAllByActiveTrue();
 
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.active = true ORDER BY p.name")
+    List<Product> findAllActiveWithCategory();
+
     @Query("SELECT p FROM Product p WHERE p.active = true AND p.currentStock <= p.minimumStockLevel")
     List<Product> findLowStockProducts();
 
