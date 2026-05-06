@@ -1,7 +1,27 @@
-import { useCallback, useEffect, useState } from "react";
-import { Tabs, Table, DatePicker, Button, Space, Tag, message, Typography } from "antd";
-import { ReloadOutlined, BarChartOutlined } from "@ant-design/icons";
+import { useCallback, useEffect, useState, useRef } from "react";
+import {
+  Tabs,
+  Table,
+  DatePicker,
+  Button,
+  Space,
+  Tag,
+  message,
+  Typography,
+  Select,
+} from "antd";
+import { ReloadOutlined, BarChartOutlined, PrinterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import { reportsApi } from "../api/reports";
 
 const { Title } = Typography;
@@ -13,6 +33,11 @@ const PO_STATUS_LABEL = {
   RECEIVED: "Teslim alındı",
   CANCELLED: "İptal",
 };
+
+const CHART_COLORS = [
+  "#4f6ef7", "#36b37e", "#ff7452", "#ffab00", "#6554c0",
+  "#00b8d9", "#ff5630", "#57d9a3", "#998dd9", "#79e2f2",
+];
 
 const moneyFmt = (n) =>
   typeof n === "number"
@@ -34,6 +59,34 @@ function useReportRange() {
   return { range, setRange, rangeParams };
 }
 
+// Yazdır butonu: sadece ilgili alanı yazdırır
+function handlePrint(ref) {
+  const content = ref.current?.innerHTML;
+  if (!content) return;
+  const win = window.open("", "_blank");
+  win.document.write(`
+    <html>
+      <head>
+        <title>Rapor</title>
+        <style>
+          body { font-family: sans-serif; padding: 24px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
+          th { background: #f0f0f0; }
+          h3 { margin-bottom: 16px; }
+          .ant-tag { border: 1px solid #ccc; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+          .ant-table-pagination, button, .ant-space, .ant-picker { display: none !important; }
+        </style>
+      </head>
+      <body>${content}</body>
+    </html>
+  `);
+  win.document.close();
+  win.focus();
+  win.print();
+  win.close();
+}
+
 export default function Reports() {
   const { range, setRange, rangeParams } = useReportRange();
   const [active, setActive] = useState("stock");
@@ -43,10 +96,19 @@ export default function Reports() {
   const [suppliers, setSuppliers] = useState([]);
   const [purchases, setPurchases] = useState([]);
 
+  // Tedarikçi filtresi
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+
   const [loadingStock, setLoadingStock] = useState(false);
   const [loadingMovers, setLoadingMovers] = useState(false);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [loadingPurchases, setLoadingPurchases] = useState(false);
+
+  // Print ref'leri
+  const stockPrintRef = useRef(null);
+  const moversPrintRef = useRef(null);
+  const suppliersPrintRef = useRef(null);
+  const purchasesPrintRef = useRef(null);
 
   const loadStock = useCallback(async () => {
     setLoadingStock(true);
@@ -78,6 +140,7 @@ export default function Reports() {
     try {
       const data = await reportsApi.supplierTotals(rangeParams());
       setSuppliers(data);
+      setSelectedSupplier(null);
     } catch (err) {
       message.error(err.response?.data?.message || "Tedarikçi raporu yüklenemedi");
     } finally {
@@ -112,6 +175,25 @@ export default function Reports() {
   useEffect(() => {
     if (active === "purchases") loadPurchases();
   }, [active, loadPurchases]);
+
+  // Tedarikçi filtresi uygulanmış veri
+  const filteredSuppliers = selectedSupplier
+    ? suppliers.filter((s) => s.supplierId === selectedSupplier)
+    : suppliers;
+
+  // Grafik için veri (ilk 10)
+  const chartData = filteredSuppliers
+    .slice(0, 10)
+    .map((s) => ({
+      name: s.supplierName,
+      tutar: Number(s.totalAmount ?? 0),
+    }));
+
+  // Tedarikçi dropdown seçenekleri
+  const supplierOptions = suppliers.map((s) => ({
+    value: s.supplierId,
+    label: s.supplierName,
+  }));
 
   const stockColumns = [
     { title: "Barkod", dataIndex: "barcode", key: "barcode", width: 120 },
@@ -203,7 +285,7 @@ export default function Reports() {
     },
   ];
 
-  const dateToolbar = (onRefresh) => (
+  const dateToolbar = (onRefresh, printRef) => (
     <Space wrap style={{ marginBottom: 16 }}>
       <span>Tarih aralığı:</span>
       <RangePicker
@@ -215,6 +297,9 @@ export default function Reports() {
       <Button icon={<ReloadOutlined />} onClick={onRefresh}>
         Yenile
       </Button>
+      <Button icon={<PrinterOutlined />} onClick={() => handlePrint(printRef)}>
+        Yazdır
+      </Button>
     </Space>
   );
 
@@ -223,10 +308,13 @@ export default function Reports() {
       key: "stock",
       label: "Güncel stok",
       children: (
-        <div>
+        <div ref={stockPrintRef}>
           <Space style={{ marginBottom: 16 }}>
             <Button type="primary" icon={<ReloadOutlined />} onClick={loadStock}>
               Yenile
+            </Button>
+            <Button icon={<PrinterOutlined />} onClick={() => handlePrint(stockPrintRef)}>
+              Yazdır
             </Button>
           </Space>
           <Table
@@ -244,8 +332,8 @@ export default function Reports() {
       key: "movers",
       label: "En çok hareket",
       children: (
-        <div>
-          {dateToolbar(loadMovers)}
+        <div ref={moversPrintRef}>
+          {dateToolbar(loadMovers, moversPrintRef)}
           <Table
             rowKey={(r) => `${r.productId}-${r.barcode}`}
             loading={loadingMovers}
@@ -260,13 +348,83 @@ export default function Reports() {
       key: "suppliers",
       label: "Tedarikçi toplamları",
       children: (
-        <div>
-          {dateToolbar(loadSuppliers)}
+        <div ref={suppliersPrintRef}>
+          {/* Toolbar */}
+          <Space wrap style={{ marginBottom: 16 }}>
+            <span>Tarih aralığı:</span>
+            <RangePicker
+              showTime
+              value={range}
+              onChange={(v) => setRange(v || [])}
+              format="DD.MM.YYYY HH:mm"
+            />
+            <Button icon={<ReloadOutlined />} onClick={loadSuppliers}>
+              Yenile
+            </Button>
+            <Button icon={<PrinterOutlined />} onClick={() => handlePrint(suppliersPrintRef)}>
+              Yazdır
+            </Button>
+          </Space>
+
+          {/* Tedarikçi filtresi */}
+          <Space wrap style={{ marginBottom: 16 }}>
+            <span>Tedarikçi filtresi:</span>
+            <Select
+              allowClear
+              placeholder="Tüm tedarikçiler"
+              style={{ width: 240 }}
+              options={supplierOptions}
+              value={selectedSupplier}
+              onChange={(v) => setSelectedSupplier(v ?? null)}
+            />
+          </Space>
+
+          {/* Grafik */}
+          {chartData.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <Title level={5} style={{ marginBottom: 8 }}>
+                Tedarikçi Bazlı Harcama Grafiği
+              </Title>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={chartData} margin={{ top: 8, right: 24, left: 16, bottom: 48 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    angle={-30}
+                    textAnchor="end"
+                    interval={0}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis
+                    tickFormatter={(v) =>
+                      v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v
+                    }
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip
+                    formatter={(value) =>
+                      value.toLocaleString("tr-TR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })
+                    }
+                  />
+                  <Bar dataKey="tutar" name="Toplam Tutar (₺)" radius={[4, 4, 0, 0]}>
+                    {chartData.map((_, index) => (
+                      <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Tablo */}
           <Table
             rowKey="supplierId"
             loading={loadingSuppliers}
             columns={supplierColumns}
-            dataSource={suppliers}
+            dataSource={filteredSuppliers}
             pagination={{ pageSize: 15 }}
           />
         </div>
@@ -276,8 +434,8 @@ export default function Reports() {
       key: "purchases",
       label: "Satın alma özeti",
       children: (
-        <div>
-          {dateToolbar(loadPurchases)}
+        <div ref={purchasesPrintRef}>
+          {dateToolbar(loadPurchases, purchasesPrintRef)}
           <Table
             rowKey="orderId"
             loading={loadingPurchases}

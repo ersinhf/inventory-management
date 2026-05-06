@@ -13,4 +13,7 @@ export const stockMovementsApi = {
 
   create: (payload) =>
     apiClient.post("/stock-movements", payload).then((r) => r.data),
+
+  cancel: (id) =>
+    apiClient.patch(`/stock-movements/${id}/cancel`).then((r) => r.data),
 };

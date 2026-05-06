@@ -93,6 +93,19 @@ public class StockMovementService {
         return mapToResponse(stockMovementRepository.save(movement));
     }
 
+    @Transactional
+    public StockMovementResponse cancelMovement(Long id) {
+        StockMovement movement = stockMovementRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("StockMovement", "id", id));
+
+        if (!movement.isActive()) {
+            throw new IllegalArgumentException("Bu hareket zaten iptal edilmiş");
+        }
+
+        movement.setActive(false);
+        return mapToResponse(stockMovementRepository.save(movement));
+    }
+
     private void validateRolePermission(User user, MovementType type) {
         RoleName role = user.getRole().getName();
         if (role == RoleName.WAREHOUSE_MANAGER) {
@@ -144,6 +157,7 @@ public class StockMovementService {
                 .stockAfter(movement.getStockAfter())
                 .note(movement.getNote())
                 .createdAt(movement.getCreatedAt())
+                .active(movement.isActive())
                 .product(StockMovementResponse.ProductRef.builder()
                         .id(product.getId())
                         .name(product.getName())

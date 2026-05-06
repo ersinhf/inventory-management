@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Table,
   Button,
@@ -9,11 +9,12 @@ import {
   Select,
   Space,
   Tag,
+  Popconfirm,
   message,
   Typography,
   DatePicker,
 } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { PlusOutlined, ReloadOutlined, PrinterOutlined } from "@ant-design/icons";
 import { stockMovementsApi } from "../api/stockMovements";
 import { productsApi } from "../api/products";
 import { useAuth } from "../auth/AuthContext";
@@ -26,6 +27,32 @@ const TYPE_META = {
   OUT: { label: "Çıkış", color: "red", sign: "−" },
   ADJUSTMENT: { label: "Sayım", color: "blue", sign: "=" },
 };
+
+function handlePrint(ref) {
+  const content = ref.current?.innerHTML;
+  if (!content) return;
+  const win = window.open("", "_blank");
+  win.document.write(`
+    <html>
+      <head>
+        <title>Stok Hareketleri</title>
+        <style>
+          body { font-family: sans-serif; padding: 24px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
+          th { background: #f0f0f0; }
+          .ant-tag { border: 1px solid #ccc; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+          .ant-table-pagination, button, .ant-space-item:has(button) { display: none !important; }
+        </style>
+      </head>
+      <body>${content}</body>
+    </html>
+  `);
+  win.document.close();
+  win.focus();
+  win.print();
+  win.close();
+}
 
 export default function StockMovements() {
   const { isWarehouseManager } = useAuth();
@@ -41,6 +68,8 @@ export default function StockMovements() {
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
   const watchedType = Form.useWatch("type", form);
+
+  const printRef = useRef(null);
 
   const allowedTypes = useMemo(
     () =>
@@ -60,7 +89,6 @@ export default function StockMovements() {
       const params = {};
       if (productId) params.productId = productId;
       if (type) params.type = type;
-      // Backend LocalDateTime bekliyor (timezone'suz). dayjs.format() ile yerel saati gönderiyoruz.
       if (range?.[0]) params.from = range[0].format("YYYY-MM-DDTHH:mm:ss");
       if (range?.[1]) params.to = range[1].format("YYYY-MM-DDTHH:mm:ss");
 
@@ -80,7 +108,7 @@ export default function StockMovements() {
       const data = await productsApi.list(true);
       setProducts(data);
     } catch {
-      // Sessizce geç; ürün listesi yoksa modal yine açılabilir.
+      // Sessizce geç
     }
   };
 
@@ -115,12 +143,22 @@ export default function StockMovements() {
       message.success("Stok hareketi kaydedildi");
       setModalOpen(false);
       fetchMovements();
-      // Ürün stokları da değiştiği için lookup'ı yenile.
       fetchProducts();
     } catch (err) {
       message.error(err.response?.data?.message || "İşlem başarısız");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleCancel = async (record) => {
+    try {
+      await stockMovementsApi.cancel(record.id);
+      message.success("Hareket iptal edildi");
+      fetchMovements();
+      fetchProducts();
+    } catch (err) {
+      message.error(err.response?.data?.message || "İptal başarısız");
     }
   };
 
@@ -167,7 +205,17 @@ export default function StockMovements() {
       render: (_, r) => {
         const meta = TYPE_META[r.type];
         return (
-          <Text strong style={{ color: meta?.color === "red" ? "#cf1322" : meta?.color === "green" ? "#389e0d" : undefined }}>
+          <Text
+            strong
+            style={{
+              color:
+                meta?.color === "red"
+                  ? "#cf1322"
+                  : meta?.color === "green"
+                  ? "#389e0d"
+                  : undefined,
+            }}
+          >
             {meta?.sign} {r.quantity}
           </Text>
         );
@@ -178,6 +226,18 @@ export default function StockMovements() {
       dataIndex: "stockAfter",
       key: "stockAfter",
       width: 120,
+    },
+    {
+      title: "Durum",
+      dataIndex: "active",
+      key: "active",
+      width: 100,
+      render: (active) =>
+        active === false ? (
+          <Tag color="default">İptal</Tag>
+        ) : (
+          <Tag color="green">Aktif</Tag>
+        ),
     },
     {
       title: "Yapan",
@@ -192,6 +252,34 @@ export default function StockMovements() {
       ellipsis: true,
       render: (v) => v || <Text type="secondary">-</Text>,
     },
+    ...(isWarehouseManager
+      ? [
+          {
+            title: "İşlemler",
+            key: "actions",
+            width: 110,
+            render: (_, record) =>
+              record.active !== false ? (
+                <Popconfirm
+                  title="Bu hareket iptal edilsin mi?"
+                  description="Stok miktarı geri alınmaz, sadece kayıt pasife alınır."
+                  onConfirm={() => handleCancel(record)}
+                  okText="İptal Et"
+                  cancelText="Vazgeç"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button size="small" danger>
+                    İptal Et
+                  </Button>
+                </Popconfirm>
+              ) : (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  İptal edildi
+                </Text>
+              ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -208,9 +296,17 @@ export default function StockMovements() {
         <Title level={3} style={{ margin: 0 }}>
           Stok Hareketleri
         </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Yeni Hareket
-        </Button>
+        <Space>
+          <Button
+            icon={<PrinterOutlined />}
+            onClick={() => handlePrint(printRef)}
+          >
+            Yazdır
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            Yeni Hareket
+          </Button>
+        </Space>
       </div>
 
       <Space wrap style={{ marginBottom: 16 }}>
@@ -253,14 +349,16 @@ export default function StockMovements() {
         </Button>
       </Space>
 
-      <Table
-        rowKey="id"
-        columns={columns}
-        dataSource={movements}
-        loading={loading}
-        pagination={{ pageSize: 15 }}
-        scroll={{ x: 1100 }}
-      />
+      <div ref={printRef}>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={movements}
+          loading={loading}
+          pagination={{ pageSize: 15 }}
+          scroll={{ x: 1100 }}
+        />
+      </div>
 
       <Modal
         title="Yeni Stok Hareketi"

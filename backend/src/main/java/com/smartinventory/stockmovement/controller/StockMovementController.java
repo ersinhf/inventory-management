@@ -80,4 +80,20 @@ public class StockMovementController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(stockMovementService.createMovement(request, currentUser));
     }
+
+    @PatchMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('WAREHOUSE_MANAGER')")
+    @Operation(
+        summary = "Stok hareketini iptal et (pasife al)",
+        description = "Sadece Depo Sorumlusu iptal edebilir. Stok miktarı geri alınmaz, sadece kayıt pasife alınır.",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "İptal edildi"),
+            @ApiResponse(responseCode = "400", description = "Zaten iptal edilmiş"),
+            @ApiResponse(responseCode = "403", description = "Yetkisiz"),
+            @ApiResponse(responseCode = "404", description = "Hareket bulunamadı")
+        }
+    )
+    public ResponseEntity<StockMovementResponse> cancelMovement(@PathVariable Long id) {
+        return ResponseEntity.ok(stockMovementService.cancelMovement(id));
+    }
 }

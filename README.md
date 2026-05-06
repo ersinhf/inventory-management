@@ -1,83 +1,80 @@
-# Inventory Management
+# 📦 Akıllı Envanter Yönetim Sistemi
 
-Stok takibi, satın alma siparişleri ve malzeme taleplerini yönetmek için geliştirilmiş full-stack bir envanter yönetim sistemi.
-
----
-
-## Teknolojiler
-
-### Backend
-- Java 17 + Spring Boot 3.3
-- Spring Security + JWT kimlik doğrulama
-- Spring Data JPA + MySQL
-- Swagger / OpenAPI (SpringDoc)
-
-### Frontend
-- React + Vite
-- Tailwind CSS
+Spring Boot + React tabanlı envanter ve tedarik zinciri yönetim sistemi.
 
 ---
 
-## Proje Yapısı
+## 🚀 Hızlı Başlangıç (Docker ile)
 
-```
-inventory-management/
-├── backend/      # Spring Boot REST API
-├── frontend/     # React uygulaması
-└── docs/
-    └── er-diagram.md   # Veritabanı ER diyagramı
+### Gereksinim
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) kurulu olmalı
+
+### Çalıştırma
+```bash
+git clone https://github.com/ersinhf/inventory-management.git
+cd inventory-management
+docker-compose up --build
 ```
 
+### Erişim
+| Servis | URL |
+|---|---|
+| Uygulama (Frontend) | http://localhost |
+| API Dokümantasyonu | http://localhost:8080/swagger-ui.html |
+
+### Varsayılan Giriş
+| Alan | Değer |
+|---|---|
+| E-posta | admin@firma.com |
+| Şifre | admin123 |
+
 ---
 
-## Kurulum
+## 🛑 Durdurmak için
+```bash
+docker-compose down
+```
+
+Veritabanını da sıfırlamak istersen:
+```bash
+docker-compose down -v
+```
+
+---
+
+## 🛠️ Manuel Kurulum (Docker olmadan)
 
 ### Gereksinimler
-- Java 17+
-- Node.js 18+
-- MySQL 8+
+- JDK 21
+- Maven 3.9+
+- MySQL 8.0
+- Node.js 20+
 
-### Backend
+### Adımlar
 
-```bash
-cd backend
-# application.properties dosyasında veritabanı bağlantısını ayarla
-./mvnw spring-boot:run
+**1. MySQL'de veritabanı oluştur:**
+```sql
+CREATE DATABASE inventory_db;
 ```
 
-API dokümantasyonuna şuradan ulaşabilirsin: `http://localhost:8080/swagger-ui.html`
+**2. Backend:**
+```bash
+cd backend
+mvn spring-boot:run
+```
 
-### Frontend
-
+**3. Frontend:**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
----
-
-## Veritabanı
-
-Projenin veritabanı tasarımı için [ER Diyagramı →](docs/er-diagram.md)
-
-### Başlıca tablolar
-
-| Tablo | Açıklama |
-|---|---|
-| `users` / `roles` | Kullanıcı ve yetkilendirme |
-| `products` / `categories` | Ürün kataloğu |
-| `suppliers` | Tedarikçiler |
-| `purchase_orders` | Satın alma siparişleri |
-| `material_requests` | Malzeme talepleri |
-| `stock_movements` | Stok hareketleri |
+Uygulama: http://localhost:5173
 
 ---
 
-## Katkıda Bulunma
-
-1. Repoyu fork'la
-2. Yeni bir branch oluştur: `git checkout -b ozellik/yeni-ozellik`
-3. Değişikliklerini commit'le: `git commit -m "Özellik: açıklama"`
-4. Branch'ini push'la: `git push origin ozellik/yeni-ozellik`
-5. Pull Request aç
+## 📋 Teknolojiler
+- **Backend:** Java 21, Spring Boot 3.3, Spring Security, JPA/Hibernate, MySQL
+- **Frontend:** React 19, Ant Design, Vite, Recharts
+- **Altyapı:** Docker, Nginx

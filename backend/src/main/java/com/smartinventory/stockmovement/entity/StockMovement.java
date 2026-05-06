@@ -47,4 +47,12 @@ public class StockMovement extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "performed_by_id", nullable = false)
     private User performedBy;
+
+    /**
+     * false -> hareket iptal edilmiş (pasif).
+     * true  -> hareket aktif (varsayılan).
+     */
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean active = true;
 }

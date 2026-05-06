@@ -32,6 +32,9 @@ public class StockMovementResponse {
     @Schema(example = "2026-04-30T20:15:00")
     private LocalDateTime createdAt;
 
+    @Schema(description = "Hareket aktif mi?", example = "true")
+    private boolean active;
+
     @Schema(description = "Hareket yapılan ürünün özeti")
     private ProductRef product;
 
